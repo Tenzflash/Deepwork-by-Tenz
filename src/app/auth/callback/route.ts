@@ -1,28 +1,39 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+/**
+ * AUTH CALLBACK ROUTE
+ * This route handles the exchange of an auth code for a user session.
+ * It is used for both Email Magic Links/Confirmations and Google OAuth.
+ */
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url)
     const code = searchParams.get('code')
-    // if "next" is in search params, use it as the redirect URL
+
+    // Default redirect to dashboard if no 'next' param is provided
     const next = searchParams.get('next') ?? '/dashboard'
 
     if (code) {
         const supabase = await createClient()
+
+        // Exchange the temporary code for a permanent session
         const { error } = await supabase.auth.exchangeCodeForSession(code)
 
         if (!error) {
-            const isLocalEnv = process.env.NODE_ENV === 'development'
-            if (isLocalEnv) {
-                // We can return to the origin if on localhost
-                return NextResponse.redirect(`${origin}${next}`)
-            } else {
-                // On Vercel, we want to ensure we redirect to the production URL
-                return NextResponse.redirect(`${origin}${next}`)
-            }
+            // Determine the correct redirect URL
+            // In Production, we prioritize the NEXT_PUBLIC_SITE_URL to avoid origin mismatches
+            const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || origin
+
+            // Construct the final destination URL
+            const redirectUrl = `${siteUrl}${next}`
+
+            return NextResponse.redirect(redirectUrl)
+        } else {
+            console.error('Auth code exchange error:', error.message)
         }
     }
 
-    // Return the user to an error page with instructions if something goes wrong
-    return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+    // If something goes wrong, redirect to login with an error message
+    // Using origin here is safe as it's a fallback for the error state
+    return NextResponse.redirect(`${origin}/login?error=Authentication failed. Please try again.`)
 }

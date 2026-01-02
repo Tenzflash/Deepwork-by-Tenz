@@ -2,24 +2,26 @@
 import { useState, useEffect, useRef } from 'react';
 import { CloudRain, Wind, Coffee, Trees, Volume2, Lock } from 'lucide-react';
 
+// This is the part TypeScript was missing:
+interface SoundBoardProps {
+    isPro: boolean;
+}
+
 const SOUNDS = [
-    { id: 'rain', name: 'Rainfall', icon: <CloudRain size={24} />, premium: false, file: '/rain.mp3' },
-    { id: 'white-noise', name: 'White Noise', icon: <Wind size={24} />, premium: false, file: '/white-noise.mp3' },
-    { id: 'cafe', name: 'Busy Cafe', icon: <Coffee size={24} />, premium: true, file: '/cafe.mp3' },
-    { id: 'forest', name: 'Zen Forest', icon: <Trees size={24} />, premium: true, file: '/forest.mp3' },
+    { id: 'rain', name: 'Rainfall', icon: <CloudRain size={24} />, premium: false, file: '/sounds/rain.mp3' },
+    { id: 'white-noise', name: 'White Noise', icon: <Wind size={24} />, premium: false, file: '/sounds/white-noise.mp3' },
+    { id: 'cafe', name: 'Busy Cafe', icon: <Coffee size={24} />, premium: true, file: '/sounds/cafe.mp3' },
+    { id: 'forest', name: 'Zen Forest', icon: <Trees size={24} />, premium: true, file: '/sounds/forest.mp3' },
 ];
 
-export default function SoundBoard() {
+export default function SoundBoard({ isPro }: SoundBoardProps) {
     const [activeSound, setActiveSound] = useState<string | null>(null);
     const [volume, setVolume] = useState(50);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
-        // Handle sound switching
         if (!activeSound) {
-            if (audioRef.current) {
-                audioRef.current.pause();
-            }
+            if (audioRef.current) audioRef.current.pause();
             return;
         }
 
@@ -32,7 +34,7 @@ export default function SoundBoard() {
             }
             audioRef.current.loop = true;
             audioRef.current.volume = volume / 100;
-            audioRef.current.play().catch(e => console.log("Audio playback blocked", e));
+            audioRef.current.play().catch(e => console.log("Playback blocked", e));
         }
 
         return () => {
@@ -40,7 +42,6 @@ export default function SoundBoard() {
         };
     }, [activeSound]);
 
-    // Sync volume slider with audio object
     useEffect(() => {
         if (audioRef.current) {
             audioRef.current.volume = volume / 100;
@@ -48,8 +49,9 @@ export default function SoundBoard() {
     }, [volume]);
 
     const toggleSound = (id: string, isPremium: boolean) => {
-        if (isPremium) {
-            alert("Upgrade to PRO to unlock this soundscape!");
+        // If it's a premium sound and user is NOT pro, redirect to settings
+        if (isPremium && !isPro) {
+            window.location.href = '/dashboard/settings';
             return;
         }
         setActiveSound(activeSound === id ? null : id);
@@ -65,7 +67,6 @@ export default function SoundBoard() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
              </span>
-                        <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-tighter">Streaming</span>
                     </div>
                 )}
             </div>
@@ -77,11 +78,12 @@ export default function SoundBoard() {
                         onClick={() => toggleSound(sound.id, sound.premium)}
                         className={`relative p-5 rounded-2xl border transition-all flex flex-col items-center gap-3 ${
                             activeSound === sound.id
-                                ? 'bg-indigo-600/10 border-indigo-500 text-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.15)]'
+                                ? 'bg-indigo-600/10 border-indigo-500 text-indigo-400'
                                 : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700'
                         }`}
                     >
-                        {sound.premium && <Lock size={12} className="absolute top-3 right-3 text-zinc-700" />}
+                        {/* Show lock if premium and user is NOT pro */}
+                        {sound.premium && !isPro && <Lock size={12} className="absolute top-3 right-3 text-zinc-700" />}
                         {sound.icon}
                         <span className="text-[10px] font-bold uppercase tracking-wider">{sound.name}</span>
                     </button>
@@ -90,10 +92,7 @@ export default function SoundBoard() {
 
             <div className="mt-auto space-y-4">
                 <div className="flex justify-between items-center text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
-                    <div className="flex items-center gap-2">
-                        <Volume2 size={14} />
-                        <span>Volume</span>
-                    </div>
+                    <span>Volume</span>
                     <span>{volume}%</span>
                 </div>
                 <input

@@ -3,104 +3,76 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-
-const SITE_URL =
-    process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+import { headers } from 'next/headers'
 
 /**
- * GOOGLE SIGN IN
- * Triggers Supabase OAuth and redirects to Google
+ * HELPER: Gets the absolute base URL safely
  */
+async function getOrigin() {
+    const headerList = await headers();
+    const host = headerList.get('host'); // e.g. deepwork-by-tenz.vercel.app
+    const protocol = host?.includes('localhost') ? 'http' : 'https';
+    return `${protocol}://${host}`;
+}
+
 export async function signInWithGoogle() {
     const supabase = await createClient()
+    const origin = await getOrigin();
 
     const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: `${SITE_URL}/auth/callback`,
-            queryParams: {
-                access_type: 'offline',
-                prompt: 'consent',
-            },
+            redirectTo: `${origin}/auth/callback`,
         },
     })
 
     if (error) {
-        console.error('Google OAuth error:', error.message)
-        redirect(`/login?error=${encodeURIComponent(error.message)}`)
+        console.error('Google Auth Error:', error.message)
+        return redirect(`/login?error=${encodeURIComponent(error.message)}`)
     }
 
-    if (data?.url) {
-        redirect(data.url)
+    if (data.url) {
+        return redirect(data.url)
     }
-
-    // Safety fallback (should never hit)
-    redirect('/login?error=OAuth failed')
 }
 
-/**
- * EMAIL + PASSWORD LOGIN
- */
 export async function login(formData: FormData) {
     const supabase = await createClient()
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
 
-    const email = String(formData.get('email') ?? '')
-    const password = String(formData.get('password') ?? '')
+    if (!email || !password) return redirect('/login?error=Missing credentials')
 
-    if (!email || !password) {
-        redirect('/login?error=Missing credentials')
-    }
-
-    const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-    })
-
-    if (error) {
-        redirect(`/login?error=${encodeURIComponent(error.message)}`)
-    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) return redirect(`/login?error=${encodeURIComponent(error.message)}`)
 
     revalidatePath('/', 'layout')
-    redirect('/dashboard')
+    return redirect('/dashboard')
 }
 
-/**
- * EMAIL + PASSWORD SIGN UP
- */
 export async function signup(formData: FormData) {
     const supabase = await createClient()
-
-    const email = String(formData.get('email') ?? '')
-    const password = String(formData.get('password') ?? '')
-
-    if (!email || !password) {
-        redirect('/login?error=Missing credentials')
-    }
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
+    const origin = await getOrigin();
 
     const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-            emailRedirectTo: `${SITE_URL}/auth/callback`,
+            emailRedirectTo: `${origin}/auth/callback`,
         },
     })
 
-    if (error) {
-        redirect(`/login?error=${encodeURIComponent(error.message)}`)
-    }
+    if (error) return redirect(`/login?error=${encodeURIComponent(error.message)}`)
 
-    revalidatePath('/', 'layout')
-    redirect('/dashboard')
+    // Turn off 'Confirm Email' in Supabase to avoid this step
+    return redirect('/dashboard')
 }
 
-/**
- * SIGN OUT
- */
 export async function signOut() {
     const supabase = await createClient()
-
     await supabase.auth.signOut()
-
     revalidatePath('/', 'layout')
-    redirect('/login')
+    return redirect('/login')
 }

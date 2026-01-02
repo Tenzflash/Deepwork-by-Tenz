@@ -3,21 +3,21 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { headers } from 'next/headers'
+
+const SITE_URL =
+    process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
 /**
  * GOOGLE SIGN IN
- * This triggers the OAuth flow and redirects the user to Google.
+ * Triggers Supabase OAuth and redirects to Google
  */
 export async function signInWithGoogle() {
     const supabase = await createClient()
-    const headerList = await headers()
-    const origin = headerList.get('origin')
 
     const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: `${origin}/auth/callback`,
+            redirectTo: `${SITE_URL}/auth/callback`,
             queryParams: {
                 access_type: 'offline',
                 prompt: 'consent',
@@ -26,31 +26,38 @@ export async function signInWithGoogle() {
     })
 
     if (error) {
-        console.error('Google Auth Error:', error.message)
-        return redirect(`/login?error=${encodeURIComponent(error.message)}`)
+        console.error('Google OAuth error:', error.message)
+        redirect(`/login?error=${encodeURIComponent(error.message)}`)
     }
 
-    if (data.url) {
-        return redirect(data.url)
+    if (data?.url) {
+        redirect(data.url)
     }
+
+    // Safety fallback (should never hit)
+    redirect('/login?error=OAuth failed')
 }
 
 /**
- * EMAIL LOGIN
+ * EMAIL + PASSWORD LOGIN
  */
 export async function login(formData: FormData) {
     const supabase = await createClient()
-    const email = formData.get('email') as string
-    const password = formData.get('password') as string
+
+    const email = String(formData.get('email') ?? '')
+    const password = String(formData.get('password') ?? '')
 
     if (!email || !password) {
-        return redirect('/login?error=Missing credentials')
+        redirect('/login?error=Missing credentials')
     }
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+    })
 
     if (error) {
-        return redirect(`/login?error=${encodeURIComponent(error.message)}`)
+        redirect(`/login?error=${encodeURIComponent(error.message)}`)
     }
 
     revalidatePath('/', 'layout')
@@ -58,30 +65,32 @@ export async function login(formData: FormData) {
 }
 
 /**
- * EMAIL SIGNUP
+ * EMAIL + PASSWORD SIGN UP
  */
 export async function signup(formData: FormData) {
     const supabase = await createClient()
-    const email = formData.get('email') as string
-    const password = formData.get('password') as string
 
-    const headerList = await headers()
-    const origin = headerList.get('origin')
+    const email = String(formData.get('email') ?? '')
+    const password = String(formData.get('password') ?? '')
+
+    if (!email || !password) {
+        redirect('/login?error=Missing credentials')
+    }
 
     const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-            emailRedirectTo: `${origin}/auth/callback`,
+            emailRedirectTo: `${SITE_URL}/auth/callback`,
         },
     })
 
     if (error) {
-        return redirect(`/login?error=${encodeURIComponent(error.message)}`)
+        redirect(`/login?error=${encodeURIComponent(error.message)}`)
     }
 
     revalidatePath('/', 'layout')
-    return redirect('/dashboard')
+    redirect('/dashboard')
 }
 
 /**
@@ -89,7 +98,9 @@ export async function signup(formData: FormData) {
  */
 export async function signOut() {
     const supabase = await createClient()
+
     await supabase.auth.signOut()
+
     revalidatePath('/', 'layout')
     redirect('/login')
 }

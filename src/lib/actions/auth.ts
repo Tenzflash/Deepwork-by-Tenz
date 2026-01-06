@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
 
 /**
- * HELPER: Construct absolute URL for redirects
+ * Helper to get the base URL accurately in Next.js 16/React 19
  */
 async function getBaseUrl() {
     const headerList = await headers();
@@ -53,7 +53,7 @@ export async function login(formData: FormData) {
 export async function signup(formData: FormData) {
     const supabase = await createClient();
     const email = formData.get('email') as string;
-    const password = formData.get('password') as string
+    const password = formData.get('password') as string;
     const origin = await getBaseUrl();
 
     const { error } = await supabase.auth.signUp({
@@ -68,7 +68,7 @@ export async function signup(formData: FormData) {
         return redirect(`/login?error=${encodeURIComponent(error.message)}`);
     }
 
-    // Success: Refresh and move to dashboard
+    // After signup, we refresh and attempt redirect
     revalidatePath('/', 'layout');
     return redirect('/dashboard');
 }

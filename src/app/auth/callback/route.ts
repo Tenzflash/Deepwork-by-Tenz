@@ -12,13 +12,10 @@ export async function GET(request: Request) {
         const { error } = await supabase.auth.exchangeCodeForSession(code)
 
         if (!error) {
-            // Success: send the user to the dashboard
             return NextResponse.redirect(`${origin}${next}`)
-        } else {
-            console.error('Exchange error:', error.message)
         }
     }
 
-    // Fail: send back to login with error
-    return NextResponse.redirect(`${origin}/login?error=Authentication failed`)
+    // If something fails, return to login with error
+    return NextResponse.redirect(`${origin}/login?error=Auth session failed`)
 }

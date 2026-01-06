@@ -4,6 +4,7 @@ import SoundBoard from '@/components/sounds/SoundBoard';
 import TaskJournal from '@/components/dashboard/TaskJournal';
 import { createClient } from '@/lib/supabase/server';
 
+// Note the updated type for Next.js 16/React 19
 export default async function DashboardPage() {
     const supabase = await createClient();
 
@@ -36,7 +37,7 @@ export default async function DashboardPage() {
     const totalMinsToday = sessions?.filter(s => s.created_at.startsWith(todayStr))
         .reduce((acc, curr) => acc + curr.duration_minutes, 0) || 0;
 
-    // 4. Group data for ProgressChart
+    // 4. Map Chart Data
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const chartData = Array.from({ length: 7 }).map((_, i) => {
         const date = new Date();
@@ -51,8 +52,6 @@ export default async function DashboardPage() {
 
     return (
         <div className="max-w-7xl mx-auto w-full p-4 lg:p-8 space-y-8">
-
-            {/* Header: Minimal & Clean */}
             <header className="flex justify-between items-center px-2">
                 <div>
                     <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
@@ -66,37 +65,31 @@ export default async function DashboardPage() {
                 </div>
             </header>
 
-            {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-
-                {/* LEFT: Stats & Analytics (3 Cols) */}
+                {/* LEFT: Stats & Analytics */}
                 <div className="lg:col-span-3 space-y-6 order-3 lg:order-1">
                     <ProgressChart data={chartData} />
                     <div className="bg-zinc-900/40 p-6 rounded-3xl border border-zinc-800/50">
                         <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4">Deep Work Tips</h4>
-                        <p className="text-xs text-zinc-400 leading-relaxed">
+                        <p className="text-xs text-zinc-400 leading-relaxed italic">
                             "The key to deep work is not just to schedule it, but to protect it from all shallow distractions."
                         </p>
                     </div>
                 </div>
 
-                {/* CENTER: The Task Journal (FOCUS POINT) (6 Cols) */}
-                <div className="lg:col-span-6 order-1 lg:order-2 h-[600px]">
+                {/* CENTER: The Task Journal (FOCUS POINT) */}
+                <div className="lg:col-span-6 order-1 lg:order-2">
                     <TaskJournal initialTasks={tasks || []} />
                 </div>
 
-                {/* RIGHT: Timer & Audio (3 Cols) */}
+                {/* RIGHT: Timer & Audio */}
                 <div className="lg:col-span-3 space-y-6 order-2 lg:order-3">
                     <div className="bg-zinc-900/50 p-6 rounded-3xl border border-zinc-800 flex flex-col items-center">
-                        <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-6">Focus Engine</h3>
-                        {/* We use a scaled down version of the Timer for the sidebar */}
-                        <div className="transform scale-90 origin-top">
-                            <Timer />
-                        </div>
+                        <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-6 text-center w-full">Focus Engine</h3>
+                        <Timer />
                     </div>
                     <SoundBoard isPro={isPro} />
                 </div>
-
             </div>
         </div>
     );

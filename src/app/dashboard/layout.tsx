@@ -1,5 +1,6 @@
-import { Clock, Zap, BarChart3, Settings, Trophy } from 'lucide-react';
+import { Clock, Zap, BarChart3, Settings, Trophy, LogOut } from 'lucide-react';
 import Link from 'next/link';
+import { signOut } from '@/lib/actions/auth';
 
 export default function DashboardLayout({
                                             children,
@@ -25,8 +26,17 @@ export default function DashboardLayout({
                     <NavItem icon={<Trophy size={20} />} label="Achievements" href="/dashboard/achievements" />
                 </nav>
 
-                <div className="pt-6 border-t border-zinc-800">
+                <div className="pt-6 border-t border-zinc-800 space-y-2">
                     <NavItem icon={<Settings size={20} />} label="Settings" href="/dashboard/settings" />
+                    <form action={signOut}>
+                        <button
+                            type="submit"
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
+                        >
+                            <LogOut size={20} />
+                            <span>Sign Out</span>
+                        </button>
+                    </form>
                 </div>
             </aside>
 

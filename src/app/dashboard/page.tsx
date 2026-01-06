@@ -10,6 +10,11 @@ export default async function DashboardPage() {
 
     // 1. Fetch User and Pro Status
     const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        return null; // Middleware handles redirection
+    }
+
     const { data: profile } = await supabase
         .from('profiles')
         .select('is_pro')

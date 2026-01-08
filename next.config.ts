@@ -10,7 +10,8 @@ const nextConfig: NextConfig = {
     serverActions: {
       allowedOrigins: [
         'localhost:3000',
-        'deepwork-by-tenz.vercel.app'
+        'deepwork-by-tenz.vercel.app',
+        'https://deepwork-by-tenz.vercel.app'
       ],
     },
   },

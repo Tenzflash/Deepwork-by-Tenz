@@ -8,10 +8,10 @@ interface SoundBoardProps {
 }
 
 const SOUNDS = [
-    { id: 'rain', name: 'Rainfall', icon: <CloudRain size={24} />, premium: false, file: '/sounds/rain.mp3' },
-    { id: 'white-noise', name: 'White Noise', icon: <Wind size={24} />, premium: false, file: '/sounds/white-noise.mp3' },
-    { id: 'cafe', name: 'Busy Cafe', icon: <Coffee size={24} />, premium: true, file: '/sounds/cafe.mp3' },
-    { id: 'forest', name: 'Zen Forest', icon: <Trees size={24} />, premium: true, file: '/sounds/forest.mp3' },
+    { id: 'rain', name: 'Rainfall', icon: <CloudRain size={24} />, premium: false, file: '/rain.mp3' },
+    { id: 'white-noise', name: 'White Noise', icon: <Wind size={24} />, premium: false, file: '/white-noise.mp3' },
+    { id: 'cafe', name: 'Busy Cafe', icon: <Coffee size={24} />, premium: true, file: '/cafe.mp3' },
+    { id: 'forest', name: 'Zen Forest', icon: <Trees size={24} />, premium: true, file: '/forest.mp3' },
 ];
 
 export default function SoundBoard({ isPro }: SoundBoardProps) {

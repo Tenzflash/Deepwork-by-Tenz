@@ -7,12 +7,11 @@ import { createClient } from '@/lib/supabase/server'
 export async function signInWithGoogle() {
     const supabase = await createClient()
     
-    // Using a relative path here. Supabase will combine this with 
-    // your "Site URL" setting in the dashboard automatically.
     const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: '/auth/callback',
+            // Relative path is safest for Vercel
+            redirectTo: '/auth/callback', 
             queryParams: {
                 access_type: 'offline',
                 prompt: 'consent',

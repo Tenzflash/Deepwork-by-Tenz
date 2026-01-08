@@ -2,21 +2,23 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
-  const code = searchParams.get('code')
-  // 'next' allows you to redirect to a specific page after login
-  const next = searchParams.get('next') ?? '/dashboard'
+  // 1. Get the URL details from the incoming request
+  const requestUrl = new URL(request.url)
+  const code = requestUrl.searchParams.get('code')
+  const origin = requestUrl.origin // This will be https://deepwork-by-tenz.vercel.app on Vercel
 
   if (code) {
     const supabase = await createClient()
+    
+    // 2. Exchange the temporary code for a permanent session
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     
     if (!error) {
-      // Successful login -> go to dashboard
-      return NextResponse.redirect(`${origin}${next}`)
+      // 3. SUCCESS: Redirect to dashboard using the dynamic origin
+      return NextResponse.redirect(`${origin}/dashboard`)
     }
   }
 
-  // If code exchange fails, send back to login
+  // 4. FAILURE: Return to login with an error
   return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
 }

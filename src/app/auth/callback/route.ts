@@ -1,21 +1,23 @@
-import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
-    const { searchParams, origin } = new URL(request.url)
-    const code = searchParams.get('code')
-    const next = searchParams.get('next') ?? '/dashboard'
+  const requestUrl = new URL(request.url)
+  const code = requestUrl.searchParams.get('code')
+  
+  // Hardcode the Vercel URL here just to test and break the loop
+  const siteUrl = 'https://deepwork-by-tenz.vercel.app'
 
-    if (code) {
-        const supabase = await createClient()
-        const { error } = await supabase.auth.exchangeCodeForSession(code)
-
-        if (!error) {
-            // Use origin to ensure we stay on the same domain (localhost or vercel)
-            return NextResponse.redirect(`${origin}${next}`)
-        }
+  if (code) {
+    const supabase = await createClient()
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    
+    if (!error) {
+      // Direct redirect to dashboard
+      return NextResponse.redirect(`${siteUrl}/dashboard`)
     }
+  }
 
-    // Return the user to an error page if code exchange fails
-    return NextResponse.redirect(`${origin}/login?error=Authentication failed`)
+  // If it fails, send the error back to login
+  return NextResponse.redirect(`${siteUrl}/login?error=Session_Exchange_Failed`)
 }

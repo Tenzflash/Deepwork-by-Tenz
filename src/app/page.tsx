@@ -8,7 +8,7 @@ export default function HomePage() {
         <nav className="flex items-center justify-between p-6 max-w-7xl mx-auto">
           <div className="text-xl font-bold tracking-tighter flex items-center gap-2">
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">D</div>
-            DeepWork
+            DeepWork By Tenz
           </div>
           <div className="flex gap-6 items-center">
             <Link href="/login" className="text-sm font-medium hover:text-indigo-400 transition">Log in</Link>

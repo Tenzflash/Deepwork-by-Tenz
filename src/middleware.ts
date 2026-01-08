@@ -8,8 +8,6 @@ export async function middleware(request: NextRequest) {
     },
   })
 
-  // We use the variables directly. If they are missing in Vercel, 
-  // the createServerClient will throw a clear error in the logs.
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -42,9 +40,8 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Protect dashboard: If no user, redirect to login
+  // Protect Dashboard: No user = No access
   if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
-    // This dynamically creates the redirect URL based on the current domain
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

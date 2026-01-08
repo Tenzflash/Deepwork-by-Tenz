@@ -7,12 +7,12 @@ import { createClient } from '@/lib/supabase/server'
 export async function signInWithGoogle() {
     const supabase = await createClient()
     
-    // Leaving redirectTo empty lets Supabase use the "Site URL" 
-    // configured in your dashboard automatically.
+    // Using a relative path here. Supabase will combine this with 
+    // your "Site URL" setting in the dashboard automatically.
     const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: undefined, 
+            redirectTo: '/auth/callback',
             queryParams: {
                 access_type: 'offline',
                 prompt: 'consent',
@@ -20,8 +20,13 @@ export async function signInWithGoogle() {
         },
     })
 
-    if (error) redirect(`/login?error=${encodeURIComponent(error.message)}`)
-    if (data.url) redirect(data.url)
+    if (error) {
+        redirect(`/login?error=${encodeURIComponent(error.message)}`)
+    }
+
+    if (data.url) {
+        redirect(data.url)
+    }
 }
 
 export async function login(formData: FormData) {
@@ -31,7 +36,9 @@ export async function login(formData: FormData) {
 
     const { error } = await supabase.auth.signInWithPassword({ email, password })
 
-    if (error) redirect(`/login?error=${encodeURIComponent(error.message)}`)
+    if (error) {
+        redirect(`/login?error=${encodeURIComponent(error.message)}`)
+    }
 
     revalidatePath('/', 'layout')
     redirect('/dashboard')
@@ -42,13 +49,17 @@ export async function signup(formData: FormData) {
     const email = formData.get('email') as string
     const password = formData.get('password') as string
 
-    // For signup, Supabase needs to know where to send the confirmation email link
     const { error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+            emailRedirectTo: '/auth/callback',
+        },
     })
 
-    if (error) redirect(`/login?error=${encodeURIComponent(error.message)}`)
+    if (error) {
+        redirect(`/login?error=${encodeURIComponent(error.message)}`)
+    }
 
     revalidatePath('/', 'layout')
     redirect('/dashboard')

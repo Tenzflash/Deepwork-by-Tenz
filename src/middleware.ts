@@ -1,9 +1,12 @@
+// src/middleware.ts
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
-    request: { headers: request.headers },
+    request: {
+      headers: request.headers,
+    },
   })
 
   const supabase = createServerClient(
@@ -11,41 +14,57 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) { return request.cookies.get(name)?.value },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({ name, value, ...options })
-          response = NextResponse.next({ request: { headers: request.headers } })
-          response.cookies.set({ name, value, ...options })
+        getAll() {
+          return request.cookies.getAll()
         },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({ name, value: '', ...options })
-          response = NextResponse.next({ request: { headers: request.headers } })
-          response.cookies.set({ name, value: '', ...options })
+        setAll(cookiesToSet) {
+          // ✅ Fix: Only set cookies on the response object
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options)
+          })
         },
       },
     }
   )
 
-  // CRITICAL: Use getUser() instead of getSession() for security/stability
-  const { data: { user } } = await supabase.auth.getUser()
+  // ✅ Refresh session – this is critical for SSR auth to work
+  const {
+    data: { user },
+    error: sessionError,
+  } = await supabase.auth.getUser()
 
-  const isDashboard = request.nextUrl.pathname.startsWith('/dashboard')
-  const isLoginPage = request.nextUrl.pathname.startsWith('/login')
-
-  // 1. If trying to access dashboard while NOT logged in -> Go to Login
-  if (isDashboard && !user) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  // ✅ Protected routes: redirect unauthenticated users to /login
+  const isProtectedRoute = request.nextUrl.pathname.startsWith('/dashboard')
+  
+  if (isProtectedRoute && !user) {
+    const redirectUrl = new URL('/login', request.url)
+    redirectUrl.searchParams.set('redirectedFrom', request.nextUrl.pathname)
+    return NextResponse.redirect(redirectUrl)
   }
 
-  // 2. If trying to access login while ALREADY logged in -> Go to Dashboard
-  // This breaks the "Unexpected Token" loop!
-  if (isLoginPage && user) {
+  // ✅ Authed users shouldn't access login/signup pages
+  const isAuthPage = 
+    request.nextUrl.pathname === '/login' || 
+    request.nextUrl.pathname === '/signup'
+  
+  if (isAuthPage && user) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
   return response
 }
 
+// ✅ Matcher: run middleware on these paths only
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|auth/callback|api).*)'],
+  matcher: [
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public files (robots.txt, sitemap.xml, etc.)
+     * - auth callback (handled by route handler)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|auth/callback).*)',
+  ],
 }

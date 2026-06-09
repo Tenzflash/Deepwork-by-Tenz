@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Play, Pause, RotateCcw, Plus, Minus } from 'lucide-react'
-import { saveSession } from '@/lib/actions/sessions' // Adjust path if your session.ts is elsewhere
+import { Play, Pause, RotateCcw, Plus, Minus, Loader2, CheckCircle2 } from 'lucide-react'
+import { saveSession } from '@/lib/actions/sessions'
 
 interface Task {
   id: string
@@ -10,24 +10,43 @@ interface Task {
 }
 
 export default function Timer({ tasks }: { tasks: Task[] }) {
-  const [time, setTime] = useState(0) // Start from 0
+  const [time, setTime] = useState(0)
   const [isActive, setIsActive] = useState(false)
   const [selectedTaskId, setSelectedTaskId] = useState<string>('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
 
-  // Save session to Supabase and reset timer
   const handleSaveAndReset = useCallback(async () => {
     if (time > 0) {
-      // Convert seconds to minutes. Math.max ensures at least 1 min is saved if > 0 seconds
-      const minutes = Math.max(1, Math.round(time / 60)) 
+      setIsSaving(true)
+      setSaveStatus('idle')
       
-      // Call your existing server action, passing the task ID
-      await saveSession(minutes, 'focus', selectedTaskId || null)
+      try {
+        const minutes = Math.max(1, Math.round(time / 60))
+        console.log('Saving session:', { minutes, task_id: selectedTaskId })
+        
+        const result = await saveSession(minutes, 'focus', selectedTaskId || null)
+        
+        if (result?.error) {
+          console.error('Save failed:', result.error)
+          setSaveStatus('error')
+        } else {
+          console.log('✓ Session saved successfully!')
+          setSaveStatus('success')
+          setTime(0)
+          setIsActive(false)
+          
+          setTimeout(() => setSaveStatus('idle'), 3000)
+        }
+      } catch (err) {
+        console.error('Failed to save session:', err)
+        setSaveStatus('error')
+      } finally {
+        setIsSaving(false)
+      }
     }
-    setTime(0)
-    setIsActive(false)
   }, [time, selectedTaskId])
 
-  // The interval that counts UP every second
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null
     if (isActive) {
@@ -42,9 +61,8 @@ export default function Timer({ tasks }: { tasks: Task[] }) {
 
   const toggleTimer = () => setIsActive(!isActive)
 
-  // Adjust time by 1 minute (60 seconds)
   const adjustTime = (seconds: number) => {
-    if (!isActive) { // Only allow adjusting when the timer is paused
+    if (!isActive) {
       setTime((prev) => Math.max(0, prev + seconds))
     }
   }
@@ -54,12 +72,12 @@ export default function Timer({ tasks }: { tasks: Task[] }) {
 
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-xs">
-      {/* Task Selector Dropdown */}
+      {/* Task Selector */}
       <select
         value={selectedTaskId}
         onChange={(e) => setSelectedTaskId(e.target.value)}
-        className="w-full bg-zinc-800 text-zinc-300 text-sm rounded-lg px-3 py-2 border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        disabled={isActive}
+        className="w-full bg-zinc-800 text-zinc-300 text-sm rounded-lg px-3 py-2 border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+        disabled={isActive || isSaving}
       >
         <option value="">-- Select a Task (Optional) --</option>
         {tasks.map((task) => (
@@ -78,7 +96,7 @@ export default function Timer({ tasks }: { tasks: Task[] }) {
       <div className="flex items-center gap-6">
         <button
           onClick={() => adjustTime(-60)}
-          disabled={isActive || time === 0}
+          disabled={isActive || isSaving || time === 0}
           className="p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           <Minus size={20} />
@@ -86,30 +104,63 @@ export default function Timer({ tasks }: { tasks: Task[] }) {
         <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Adjust 1m</span>
         <button
           onClick={() => adjustTime(60)}
-          disabled={isActive}
+          disabled={isActive || isSaving}
           className="p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           <Plus size={20} />
         </button>
       </div>
 
-      {/* Play/Pause & Reset/Save */}
+      {/* Play/Pause & Save/Reset Buttons */}
       <div className="flex gap-4">
         <button
           onClick={toggleTimer}
-          className="p-4 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shadow-lg shadow-indigo-500/20"
+          disabled={isSaving}
+          className="p-4 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shadow-lg shadow-indigo-500/20 disabled:opacity-50"
         >
           {isActive ? <Pause size={24} /> : <Play size={24} />}
         </button>
+        
         <button
           onClick={handleSaveAndReset}
-          disabled={time === 0}
-          className="p-4 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          title="Save session and reset"
+          disabled={time === 0 || isSaving}
+          className="p-4 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors relative"
+          title="Save session and reset timer"
         >
-          <RotateCcw size={24} />
+          {isSaving ? (
+            <Loader2 size={24} className="animate-spin" />
+          ) : saveStatus === 'success' ? (
+            <CheckCircle2 size={24} className="text-green-400" />
+          ) : (
+            <RotateCcw size={24} />
+          )}
         </button>
       </div>
+
+      {/* Status Messages */}
+      <div className="h-5 flex items-center justify-center">
+        {saveStatus === 'success' && (
+          <p className="text-xs text-green-400 font-medium animate-in fade-in slide-in-from-bottom-2 flex items-center gap-1">
+            <CheckCircle2 size={12} />
+            Session saved!
+          </p>
+        )}
+        {saveStatus === 'error' && (
+          <p className="text-xs text-red-400 font-medium animate-in fade-in slide-in-from-bottom-2">
+            ✗ Save failed. Check console.
+          </p>
+        )}
+        {isSaving && (
+          <p className="text-xs text-zinc-400 font-medium animate-in fade-in">
+            Saving...
+          </p>
+        )}
+      </div>
+
+      {/* Helper Text */}
+      <p className="text-[10px] text-zinc-600 text-center">
+        {isActive ? 'Timer running...' : time > 0 ? 'Click ↻ to save & reset' : 'Press ▶ to start'}
+      </p>
     </div>
   )
 }

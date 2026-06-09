@@ -1,13 +1,15 @@
 import { login, signup, signInWithGoogle } from '@/lib/actions/auth'
 import { Zap, Chrome } from 'lucide-react'
+import LoginForm from '@/components/auth/Loginform' // <-- 1. Added import
 
 // searchParams is a Promise in Next.js 16
 export default async function LoginPage(props: {
-    searchParams: Promise<{ error?: string }>
+    searchParams: Promise<{ error?: string, message?: string }> // <-- 2. Added message
 }) {
     // CRITICAL: Await the params
     const searchParams = await props.searchParams;
     const error = searchParams.error;
+    const message = searchParams.message; // <-- 3. Extract message
 
     return (
         <div className="flex min-h-screen bg-black items-center justify-center p-6 font-sans">
@@ -20,9 +22,17 @@ export default async function LoginPage(props: {
                     <p className="text-zinc-500 text-sm italic">Master your focus, reclaim your time.</p>
                 </div>
 
+                {/* Error Message */}
                 {error && (
                     <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-[11px] p-4 rounded-xl text-center font-medium animate-in fade-in slide-in-from-top-1">
                         {decodeURIComponent(error)}
+                    </div>
+                )}
+
+                {/* Success Message (For Forgot Password) */}
+                {message && !error && (
+                    <div className="bg-green-500/10 border border-green-500/20 text-green-400 text-[11px] p-4 rounded-xl text-center font-medium animate-in fade-in slide-in-from-top-1">
+                        {decodeURIComponent(message)}
                     </div>
                 )}
 
@@ -42,39 +52,8 @@ export default async function LoginPage(props: {
                         <div className="relative flex justify-center text-[10px] uppercase"><span className="bg-zinc-900/50 px-3 text-zinc-600 font-bold tracking-[0.2em]">Or email access</span></div>
                     </div>
 
-                    <form className="space-y-4">
-                        <div className="space-y-3">
-                            <input
-                                name="email"
-                                type="email"
-                                placeholder="Email address"
-                                required
-                                className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl px-4 py-3.5 text-sm focus:ring-1 focus:ring-indigo-500 outline-none transition-all placeholder:text-zinc-700"
-                            />
-                            <input
-                                name="password"
-                                type="password"
-                                placeholder="Password"
-                                required
-                                className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl px-4 py-3.5 text-sm focus:ring-1 focus:ring-indigo-500 outline-none transition-all placeholder:text-zinc-700"
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3 pt-2">
-                            <button
-                                formAction={login}
-                                className="bg-zinc-800 text-white py-3.5 rounded-xl text-sm font-bold hover:bg-zinc-700 transition-all active:scale-95 border border-zinc-700/50"
-                            >
-                                Sign In
-                            </button>
-                            <button
-                                formAction={signup}
-                                className="bg-indigo-600 text-white py-3.5 rounded-xl text-sm font-bold hover:bg-indigo-500 transition-all active:scale-95 shadow-lg shadow-indigo-600/20"
-                            >
-                                Sign Up
-                            </button>
-                        </div>
-                    </form>
+                    {/* 4. Replaced the old hardcoded form with our new Client Component */}
+                    <LoginForm />
                 </div>
             </div>
         </div>

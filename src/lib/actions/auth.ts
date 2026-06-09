@@ -77,3 +77,21 @@ export async function signOut() {
     revalidatePath('/', 'layout')
     redirect('/login')
 }
+
+export async function resetPasswordAction(formData: FormData) {
+    const supabase = await createClient()
+    const email = formData.get('email') as string
+    const origin = await getOrigin(); // Uses your existing helper!
+
+    // The link in the email will point to an /update-password page
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${origin}/update-password`,
+    })
+
+    if (error) {
+        return redirect(`/login?error=${encodeURIComponent(error.message)}`)
+    }
+    
+    // Success! Redirect back to login with a success message
+    return redirect('/login?message=Check%20your%20email%20for%20the%20reset%20link')
+}

@@ -22,12 +22,20 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         redirect('/login');
     }
 
-    // 3. Parallel Data Fetching (Fastest performance for Next.js 15)
+       // 3. Parallel Data Fetching
     const [profileRes, tasksRes, sessionsRes] = await Promise.all([
         supabase.from('profiles').select('is_pro').eq('id', user.id).single(),
-        supabase.from('tasks').select('*').order('created_at', { ascending: false }),
+        
+        // FIX: Added .eq('user_id', user.id) to tasks (just to be 100% safe)
+        supabase.from('tasks')
+            .select('*')
+            .eq('user_id', user.id) 
+            .order('created_at', { ascending: false }),
+            
+        // FIX: Added .eq('user_id', user.id) to focus_sessions
         supabase.from('focus_sessions')
             .select('duration_minutes, created_at')
+            .eq('user_id', user.id) // <--- THIS IS THE MAGIC FIX
             .eq('mode', 'focus')
             .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
     ]);

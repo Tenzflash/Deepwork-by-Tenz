@@ -28,7 +28,8 @@ export async function createClient() {
         },
         remove(name: string, options: CookieOptions) {
           try {
-            cookieStore.set({ name, value, '', ...options })
+            // FIXED: Changed 'value, ' to 'value: '
+            cookieStore.set({ name, value: '', ...options })
           } catch {
             // Error intentionally ignored
           }

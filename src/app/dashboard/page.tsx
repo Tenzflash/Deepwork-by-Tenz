@@ -99,7 +99,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                 <div className="lg:col-span-3 space-y-6 order-2 lg:order-3">
                     <div className="bg-zinc-900/50 p-6 rounded-3xl border border-zinc-800 flex flex-col items-center shadow-lg">
                         <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-6 text-center w-full">Focus Timer</h3>
-                        <Timer />
+                        <Timer tasks={tasks} />
                     </div>
                     <SoundBoard isPro={isPro} />
                 </div>

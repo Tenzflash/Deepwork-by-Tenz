@@ -10,11 +10,13 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (error) {
+      console.error('Auth callback error:', error.message)
       return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error.message)}`)
     }
 
     return NextResponse.redirect(`${origin}/dashboard`)
   }
 
-  return NextResponse.redirect(`${origin}/login?error=no_code_in_callback`)
+  console.error('Auth callback error: no code in URL')
+  return NextResponse.redirect(`${origin}/login?error=no_code`)
 }

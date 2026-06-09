@@ -3,7 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-export async function saveSession(duration: number, mode: string) {
+// We added 'task_id' as an optional third parameter
+export async function saveSession(duration: number, mode: string, task_id?: string | null) {
     const supabase = await createClient()
 
     // Get the current session user
@@ -15,7 +16,8 @@ export async function saveSession(duration: number, mode: string) {
         .insert([{
             user_id: user.id,
             duration_minutes: duration,
-            mode: mode
+            mode: mode,
+            task_id: task_id || null // Save the linked task (or null if none selected)
         }])
 
     if (error) {

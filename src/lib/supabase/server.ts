@@ -8,6 +8,11 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: {
+        secure: true,
+        sameSite: 'lax',
+        path: '/',
+      },
       cookies: {
         get(name: string) {
           return cookieStore.get(name)?.value
@@ -15,17 +20,12 @@ export async function createClient() {
         set(name: string, value: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value, ...options })
-          } catch {
-            // Error intentionally ignored: This happens during 
-            // Server Component rendering where cookies cannot be set.
-          }
+          } catch {}
         },
         remove(name: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value: '', ...options })
-          } catch {
-            // Error intentionally ignored
-          }
+          } catch {}
         },
       },
     }

@@ -8,13 +8,15 @@ export async function GET(request: Request) {
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-    
-    if (!error) {
-      // Use 'origin' which dynamically detects if it's localhost or vercel
-      return NextResponse.redirect(`${origin}/dashboard`)
+
+    if (error) {
+      console.error('Auth callback error:', error.message)
+      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error.message)}`)
     }
+
+    return NextResponse.redirect(`${origin}/dashboard`)
   }
 
-  // Return to login if something fails
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
+  console.error('Auth callback error: no code in URL')
+  return NextResponse.redirect(`${origin}/login?error=no_code`)
 }

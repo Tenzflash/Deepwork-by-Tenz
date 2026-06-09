@@ -4,15 +4,17 @@ import { cookies } from 'next/headers'
 export async function createClient() {
   const cookieStore = await cookies()
 
+  // --- DEBUG LOGS ---
+  console.log('=== SUPABASE ENV CHECK ===')
+  console.log('URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+  console.log('KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Exists (starts with: ' + process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.substring(0, 10) + '...)' : 'MISSING')
+  console.log('==========================')
+  // ------------------
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      cookieOptions: {
-        secure: true,
-        sameSite: 'lax',
-        path: '/',
-      },
       cookies: {
         get(name: string) {
           return cookieStore.get(name)?.value
@@ -20,12 +22,16 @@ export async function createClient() {
         set(name: string, value: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value, ...options })
-          } catch {}
+          } catch {
+            // Error intentionally ignored
+          }
         },
         remove(name: string, options: CookieOptions) {
           try {
-            cookieStore.set({ name, value: '', ...options })
-          } catch {}
+            cookieStore.set({ name, value, '', ...options })
+          } catch {
+            // Error intentionally ignored
+          }
         },
       },
     }

@@ -1,26 +1,172 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ------------------------------------------------------------------
+   DeepWork design tokens
+   Palette is a blue-leaning "ink" rather than neutral black, so the
+   surface feels like night rather than a switched-off screen.
+   The accent is state-driven: indigo when idle, warm gold while a
+   session is running, green when a session is banked.
+------------------------------------------------------------------ */
+@theme {
+  --color-ink-950: #0a0d13;
+  --color-ink-900: #0f131b;
+  --color-ink-850: #141924;
+  --color-ink-800: #1b212e;
+  --color-ink-700: #29313f;
+  --color-ink-600: #3b4453;
+  --color-ink-400: #7d879a;
+  --color-ink-300: #a3adbf;
+  --color-ink-200: #c8cfdb;
+  --color-ink-100: #e7eaf0;
+
+  --color-focus-400: #818cf8;
+  --color-focus-500: #6366f1;
+  --color-focus-600: #4f46e5;
+
+  --color-live-400: #fbbf24;
+  --color-live-500: #f0a834;
+  --color-live-600: #d98a1a;
+
+  --color-done-400: #6ee7b7;
+  --color-done-500: #34d399;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-ink-950);
+  color: var(--color-ink-100);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Visible keyboard focus everywhere, without the permanent outline on click */
+:focus-visible {
+  outline: 2px solid var(--color-focus-400);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ------------------------------------------------------------------
+   Scrollbar (the app referenced .custom-scrollbar but never defined it)
+------------------------------------------------------------------ */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ink-700) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--color-ink-700);
+  border-radius: 999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-ink-600);
+}
+
+/* ------------------------------------------------------------------
+   Motion
+   One orchestrated entrance on page load, plus feedback that answers
+   a click. No ambient movement while a session is running — the whole
+   point of the product is that the interface stops asking for attention.
+------------------------------------------------------------------ */
+@keyframes dw-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes dw-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes dw-pop {
+  0%   { transform: scale(0.85); opacity: 0; }
+  60%  { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Slow, shallow pulse behind the timer ring while a session runs.
+   Long duration and low opacity so it reads as ambient warmth. */
+@keyframes dw-glow {
+  0%, 100% { opacity: 0.28; transform: scale(1); }
+  50%      { opacity: 0.5;  transform: scale(1.04); }
+}
+
+.dw-rise {
+  animation: dw-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.dw-fade {
+  animation: dw-fade 0.35s ease-out both;
+}
+.dw-pop {
+  animation: dw-pop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.dw-glow {
+  animation: dw-glow 6s ease-in-out infinite;
+}
+
+/* Stagger helpers for the single page-load sequence */
+.dw-delay-1 { animation-delay: 60ms; }
+.dw-delay-2 { animation-delay: 120ms; }
+.dw-delay-3 { animation-delay: 180ms; }
+.dw-delay-4 { animation-delay: 240ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Range input (volume) — the default track is invisible on dark ink
+------------------------------------------------------------------ */
+input[type="range"].dw-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-ink-800);
+  cursor: pointer;
+}
+input[type="range"].dw-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--color-ink-100);
+  border: 3px solid var(--color-focus-500);
+  transition: transform 0.15s ease;
+}
+input[type="range"].dw-range::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+input[type="range"].dw-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 3px solid var(--color-focus-500);
+  border-radius: 999px;
+  background: var(--color-ink-100);
 }

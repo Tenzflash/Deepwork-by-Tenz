@@ -10,6 +10,18 @@ type PageProps = {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
+// TODO: move this onto the profiles table so people can set their own target.
+// Five hours of deep work a day is a lot to show someone on day one.
+const DAILY_TARGET_MINUTES = 300;
+
+function formatHours(mins: number) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h === 0) return `${m}m`;
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}m`;
+}
+
 export default async function DashboardPage({ searchParams }: PageProps) {
     // 1. Initialize Supabase safely
     const supabase = await createClient();
@@ -22,20 +34,18 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         redirect('/login');
     }
 
-       // 3. Parallel Data Fetching
+    // 3. Parallel Data Fetching
     const [profileRes, tasksRes, sessionsRes] = await Promise.all([
         supabase.from('profiles').select('is_pro').eq('id', user.id).single(),
-        
-        // FIX: Added .eq('user_id', user.id) to tasks (just to be 100% safe)
+
         supabase.from('tasks')
             .select('*')
-            .eq('user_id', user.id) 
+            .eq('user_id', user.id)
             .order('created_at', { ascending: false }),
-            
-        // FIX: Added .eq('user_id', user.id) to focus_sessions
+
         supabase.from('focus_sessions')
             .select('duration_minutes, created_at')
-            .eq('user_id', user.id) // <--- THIS IS THE MAGIC FIX
+            .eq('user_id', user.id)
             .eq('mode', 'focus')
             .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
     ]);
@@ -46,9 +56,8 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
     // 4. Progress Calculations
     const todayStr = new Date().toISOString().split('T')[0];
-    const totalMinsToday = sessions
-        .filter(s => s.created_at.startsWith(todayStr))
-        .reduce((acc, curr) => acc + curr.duration_minutes, 0);
+    const todaySessions = sessions.filter(s => s.created_at.startsWith(todayStr));
+    const totalMinsToday = todaySessions.reduce((acc, curr) => acc + curr.duration_minutes, 0);
 
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const chartData = Array.from({ length: 7 }).map((_, i) => {
@@ -63,53 +72,80 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         };
     });
 
+    // Consecutive days with focus time, counting back from today.
+    let streak = 0;
+    for (let i = chartData.length - 1; i >= 0; i--) {
+        if (chartData[i].mins > 0) streak++;
+        else break;
+    }
+
+    const weekTotal = chartData.reduce((acc, d) => acc + d.mins, 0);
+    const targetPct = Math.min(100, Math.round((totalMinsToday / DAILY_TARGET_MINUTES) * 100));
+    const openTasks = tasks.filter(t => !t.is_completed).length;
+
+    const firstName =
+        (user.user_metadata?.full_name as string | undefined)?.split(' ')[0] ??
+        user.email?.split('@')[0] ??
+        'there';
+
     return (
-        <div className="max-w-7xl mx-auto w-full p-4 lg:p-8 space-y-8 animate-in fade-in duration-500">
-            <header className="flex justify-between items-center px-2">
+        <div className="mx-auto w-full max-w-7xl p-4 lg:p-8">
+            <header className="dw-rise mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-                        Focus Journal 
+                    <h1 className="flex items-center gap-2.5 text-3xl font-semibold tracking-tight text-white">
+                        Today
                         {isPro && (
-                            <span className="text-[10px] bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full border border-indigo-500/30 font-bold uppercase">
+                            <span className="rounded-full border border-focus-500/30 bg-focus-500/15 px-2.5 py-0.5 text-xs font-medium text-focus-400">
                                 Pro
                             </span>
                         )}
                     </h1>
-                    <p className="text-zinc-500 text-sm">Eliminate the shallow. Focus on the deep.</p>
-                </div>
-                <div className="text-right">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-bold mb-1">Daily Target</p>
-                    <p className="text-xl font-mono text-white leading-none">
-                        {totalMinsToday}
-                        <span className="text-zinc-600 text-sm ml-1">/ 300m</span>
+                    <p className="mt-1 text-ink-400">
+                        {totalMinsToday === 0
+                            ? `Nothing banked yet, ${firstName}. Start a session whenever you're ready.`
+                            : `${formatHours(totalMinsToday)} of focused work so far.`}
                     </p>
+                </div>
+
+                {/* Daily target, readable and honest about the unit */}
+                <div className="w-full sm:w-56">
+                    <div className="mb-2 flex items-baseline justify-between text-sm">
+                        <span className="text-ink-400">Daily target</span>
+                        <span className="text-ink-200">
+                            <span className="font-mono tabular-nums text-white">
+                                {formatHours(totalMinsToday)}
+                            </span>
+                            <span className="text-ink-500"> / {formatHours(DAILY_TARGET_MINUTES)}</span>
+                        </span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-ink-800">
+                        <div
+                            className="h-full rounded-full bg-focus-500 transition-[width] duration-700 ease-out"
+                            style={{ width: `${targetPct}%` }}
+                        />
+                    </div>
                 </div>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                {/* LEFT: Stats & Analytics */}
-                <div className="lg:col-span-3 space-y-6 order-3 lg:order-1">
-                    <ProgressChart data={chartData} />
-                    <div className="bg-zinc-900/40 p-6 rounded-3xl border border-zinc-800/50">
-                        <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4">Focus Insight</h4>
-                        <p className="text-xs text-zinc-400 leading-relaxed italic">
-                            "Deep work is the superpower of the 21st century."
-                        </p>
-                    </div>
-                </div>
-
-                {/* CENTER: The Task Journal */}
-                <div className="lg:col-span-6 order-1 lg:order-2">
-                    <TaskJournal initialTasks={tasks} />
-                </div>
-
-                {/* RIGHT: Timer & Audio */}
-                <div className="lg:col-span-3 space-y-6 order-2 lg:order-3">
-                    <div className="bg-zinc-900/50 p-6 rounded-3xl border border-zinc-800 flex flex-col items-center shadow-lg">
-                        <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-6 text-center w-full">Focus Timer</h3>
+            <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
+                {/* The session is the product. It gets the space. */}
+                <div className="space-y-6 lg:col-span-7">
+                    <section className="dw-rise dw-delay-1 rounded-3xl border border-ink-800 bg-ink-900/60 p-6 sm:p-8">
                         <Timer tasks={tasks} />
+                    </section>
+
+                    <div className="dw-rise dw-delay-3">
+                        <ProgressChart data={chartData} streak={streak} weekTotal={weekTotal} />
                     </div>
-                    <SoundBoard isPro={isPro} />
+                </div>
+
+                <div className="space-y-6 lg:col-span-5">
+                    <div className="dw-rise dw-delay-2">
+                        <TaskJournal initialTasks={tasks} openCount={openTasks} />
+                    </div>
+                    <div className="dw-rise dw-delay-4">
+                        <SoundBoard isPro={isPro} />
+                    </div>
                 </div>
             </div>
         </div>
